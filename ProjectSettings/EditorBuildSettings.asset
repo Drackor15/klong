@@ -8,4 +8,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Klong/Scenes/MainMenu.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Klong/Scenes/Lobby.unity
+    guid: fa55ba6136bed55488a13d3681cc813a
+  - enabled: 1
+    path: Assets/Klong/Scenes/2PlayerGame.unity
+    guid: e0f349b2523eab4438dc17c0ed4cf274
   m_configObjects: {}
