@@ -29,7 +29,7 @@ public class PlayerController : NetworkBehaviour
 
     private void OnMove(InputAction.CallbackContext context) {
         Debug.Log(context);
-        moveDirection = context.ReadValue<float>(); // Might need to normalize (-1, 0, 1)
+        moveDirection = context.ReadValue<float>();
     }
 
     private void OnMoveCanceled(InputAction.CallbackContext context) {

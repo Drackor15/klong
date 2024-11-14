@@ -17,8 +17,7 @@ using Mirror;
 /// NetworkRoomManager is derived from NetworkManager, and so it implements many of the virtual functions provided by the NetworkManager class.
 /// 
 /// Connor: Look at NetworkManagerPong.cs, NetworkRoomManagerExt.cs, and PlayerController.cs for inspiration on how to handle this and other classes.
-///         In particular, PlayerController.cs uses some clever code in OnStartAuthority, OnStopAuthority, to make sure each client is controlling their own characterControllers inside the Update Method
-///         The [Client] and [Server] labels could also be used to control privelidges.
+///         For Example, client/server priviledges.
 /// </summary>
 public class NetworkRoomManagerKlong : NetworkRoomManager
 {
