@@ -25,6 +25,7 @@ public class PlayerController : NetworkBehaviour
     protected Transform arrowTransform;
     [SerializeField]
     [Tooltip("The size (in Deg) in which the paddle arrow can move around in")]
+    [Range(10, 160)]
     protected int arrowArcSize = 160;
 
     public override void OnStartAuthority() {
@@ -56,7 +57,10 @@ public class PlayerController : NetworkBehaviour
         Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
 
         float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
-        if (Mathf.Abs(angle) <= arrowArcSize/2) {
+        float arcDeadspace = (180-arrowArcSize) + (arrowArcSize/2);
+        if (Mathf.Abs(angle) > arcDeadspace || Mathf.Abs(angle) < arrowArcSize/2) {
+            Debug.Log(angle); // maybe just add 180 or 360 to it?
+            if (Mathf.Abs(angle) > arcDeadspace) { angle += 180; angle = -angle; } // will break 2nd paddle and other added paddles... maybe base addition off of paddle rotation offset from AlignPaddle?
             arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
         }
     }
