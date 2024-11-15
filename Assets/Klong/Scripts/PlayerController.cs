@@ -51,7 +51,6 @@ public class PlayerController : NetworkBehaviour
         moveDirection = 0;
     }
 
-    [Command]
     private void OnLook(InputAction.CallbackContext context) {
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
@@ -79,7 +78,7 @@ public class PlayerController : NetworkBehaviour
 
         // Calculate the angle between the paddle’s local arrow direction and the direction to the origin
         float angleToFaceOrigin = Vector2.SignedAngle(localArrowDirection, directionToOrigin);
-        
+
         // Apply rotation to the paddle to align the arrow anchor with the origin
         paddleTransform.rotation = Quaternion.Euler(0, 0, paddleTransform.rotation.eulerAngles.z + angleToFaceOrigin);
     }
