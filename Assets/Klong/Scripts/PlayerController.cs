@@ -59,10 +59,28 @@ public class PlayerController : NetworkBehaviour
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
 
+        // Calculate angle in degrees and normalize to the range 0-360
         float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
-        Debug.Log(Mathf.DeltaAngle(0, angle + paddleRotationOffset));
-        if (Mathf.Abs(Mathf.DeltaAngle(0, angle + paddleRotationOffset)) < arrowArcSize/2) {
-            arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
+        angle = (angle + 360) % 360;
+
+        // Normalize paddle rotation offset to the range 0-360
+        float normalizedOffset = (paddleRotationOffset + 360) % 360;
+
+        // Check if angle falls within the arc size, using the 0-360 system
+        float minAngle = (normalizedOffset - arrowArcSize / 2 + 360) % 360;
+        float maxAngle = (normalizedOffset + arrowArcSize / 2) % 360;
+
+        // Handle wraparound in the arc range
+        if (minAngle < maxAngle) {
+            if (angle >= minAngle && angle <= maxAngle) {
+                arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
+            }
+        }
+        else {
+            // Arc crosses 360/0 boundary
+            if (angle >= minAngle || angle <= maxAngle) {
+                arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
+            }
         }
     }
 
