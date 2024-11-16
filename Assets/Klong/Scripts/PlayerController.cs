@@ -17,7 +17,6 @@ public class PlayerController : NetworkBehaviour
     [SerializeField]
     protected float moveSpeed;
     [SerializeField]
-    [SyncVar]
     protected Transform paddleTransform;
     [SerializeField]
     protected Transform arrowAnchorTransform;
@@ -27,6 +26,8 @@ public class PlayerController : NetworkBehaviour
     [Tooltip("The size (in Deg) in which the paddle arrow can move around in")]
     [Range(10, 160)]
     protected int arrowArcSize = 160;
+
+    protected float paddleRotationOffset;
 
     public override void OnStartAuthority() {
         paddleRB2D = GetComponent<Rigidbody2D>();
@@ -40,6 +41,8 @@ public class PlayerController : NetworkBehaviour
         playerInputActions.Player.Move.canceled += OnMoveCanceled;
 
         playerInputActions.Player.Look.performed += OnLook;
+
+        AlignPaddle();
     }
 
     private void OnMove(InputAction.CallbackContext context) {
@@ -57,19 +60,9 @@ public class PlayerController : NetworkBehaviour
         Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
 
         float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
-        float arcDeadspace = (180-arrowArcSize) + (arrowArcSize/2);
-        if (Mathf.Abs(angle) > arcDeadspace || Mathf.Abs(angle) < arrowArcSize/2) {
-            Debug.Log(angle); // maybe just add 180 or 360 to it?
-            if (Mathf.Abs(angle) > arcDeadspace) { angle += 180; angle = -angle; } // will break 2nd paddle and other added paddles... maybe base addition off of paddle rotation offset from AlignPaddle?
+        Debug.Log(Mathf.DeltaAngle(0, angle + paddleRotationOffset));
+        if (Mathf.Abs(Mathf.DeltaAngle(0, angle + paddleRotationOffset)) < arrowArcSize/2) {
             arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
-        }
-    }
-
-    public override void OnStartServer() {
-        base.OnStartServer();
-
-        if (isServer) {
-            AlignPaddle();
         }
     }
 
@@ -82,6 +75,7 @@ public class PlayerController : NetworkBehaviour
 
         // Calculate the angle between the paddle’s local arrow direction and the direction to the origin
         float angleToFaceOrigin = Vector2.SignedAngle(localArrowDirection, directionToOrigin);
+        paddleRotationOffset = angleToFaceOrigin;
 
         // Apply rotation to the paddle to align the arrow anchor with the origin
         paddleTransform.rotation = Quaternion.Euler(0, 0, paddleTransform.rotation.eulerAngles.z + angleToFaceOrigin);
