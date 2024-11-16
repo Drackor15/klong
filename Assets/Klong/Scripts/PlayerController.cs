@@ -45,6 +45,17 @@ public class PlayerController : NetworkBehaviour
         AlignPaddle();
     }
 
+    private void FixedUpdate() {
+        if (!isLocalPlayer) return;
+
+        paddleRB2D.velocity = new Vector2(0, moveDirection * moveSpeed);
+    }
+
+    private void OnDisable() {
+        playerInputActions?.Disable();
+    }
+
+    #region Events
     private void OnMove(InputAction.CallbackContext context) {
         Debug.Log(context);
         moveDirection = context.ReadValue<float>();
@@ -55,6 +66,12 @@ public class PlayerController : NetworkBehaviour
         moveDirection = 0;
     }
 
+    /// <summary>
+    /// Paddle Arrow follows Client's mouse cursor. Compensates for any
+    /// paddle rotations that may have occured at the start of Client authority.
+    /// <see cref="AlignPaddle"/>
+    /// </summary>
+    /// <param name="context"></param>
     private void OnLook(InputAction.CallbackContext context) {
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
@@ -83,7 +100,12 @@ public class PlayerController : NetworkBehaviour
             }
         }
     }
+    #endregion
 
+    #region Methods
+    /// <summary>
+    /// Orients Client Paddles so they face the Origin.
+    /// </summary>
     private void AlignPaddle() {
         // Calculate direction from paddle's position to the origin (0, 0)
         Vector2 directionToOrigin = (Vector2.zero - (Vector2)paddleTransform.position).normalized;
@@ -98,14 +120,5 @@ public class PlayerController : NetworkBehaviour
         // Apply rotation to the paddle to align the arrow anchor with the origin
         paddleTransform.rotation = Quaternion.Euler(0, 0, paddleTransform.rotation.eulerAngles.z + angleToFaceOrigin);
     }
-
-    private void FixedUpdate() {
-        if (!isLocalPlayer) return;
-
-        paddleRB2D.velocity = new Vector2(0, moveDirection * moveSpeed);
-    }
-
-    private void OnDisable() {
-        playerInputActions?.Disable();
-    }
+    #endregion
 }
