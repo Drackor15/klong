@@ -73,3 +73,10 @@ crashlytics-build.properties
 
 # Other Stuff
 .vsconfig
+
+# Ignore backup files
+*.bak
+*.bak.meta
+
+# Ignore Steam App ID file
+steam_appid.txt
