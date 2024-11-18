@@ -67,7 +67,7 @@ public class PlayerController : NetworkBehaviour
     /// <summary>
     /// Paddle Arrow follows Client's mouse cursor. Compensates for any
     /// paddle rotations that may have occured at the start of Client authority.
-    /// <see cref="AlignPaddle"/>
+    /// For example, when <see cref="AlignPaddle"/> acts upon the paddle.
     /// </summary>
     /// <param name="context"></param>
     private void OnLook(InputAction.CallbackContext context) {
@@ -114,11 +114,15 @@ public class PlayerController : NetworkBehaviour
         // Calculate the angle between the paddle’s local arrow direction and the direction to the origin
         float angleToFaceOrigin = Vector2.SignedAngle(localArrowDirection, directionToOrigin);
         paddleRotationOffset = angleToFaceOrigin;
-        Debug.Log((paddleRotationOffset + 360)%360);
+        
         // Apply rotation to the paddle to align the arrow anchor with the origin
         transform.rotation = Quaternion.Euler(0, 0, transform.rotation.eulerAngles.z + angleToFaceOrigin);
     }
 
+    /// <summary>
+    /// Applies velocity to the paddle, which is dependant on local y-axis, movement input, and spawn position
+    /// relative to the origin (spawn position implies certain rotations, which will change where the local y-axis points).
+    /// </summary>
     private void MovePaddle() {
         if (initPosition.x < 0) {
             paddleRB2D.velocity = moveDirection * moveSpeed * transform.up + (Vector3)GetCorrectiveVelocity();
@@ -128,10 +132,17 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Helper functin for <see cref="MovePaddle"/>. Uses Vector Projection to determine the
+    /// corrective force necessary to keep the paddle on its axis.
+    /// Checkout (https://www.geeksforgeeks.org/vector-projection-formula/) & (https://www.youtube.com/watch?v=Rw70zkvqEiE)
+    /// for more info on Vector Projection.
+    /// </summary>
+    /// <returns></returns>
     private Vector2 GetCorrectiveVelocity() {
         // Calculate offset and correction
         Vector2 localOffset = transform.position - (Vector3)initPosition;
-        Vector2 constrainedOffset = Vector2.Dot(localOffset, transform.up) * transform.up;
+        Vector2 constrainedOffset = Vector2.Dot(localOffset, transform.up) * transform.up; // Produces vector parallel to transform.up. This vect is a component of localOffset. localOffset = parallel + perpendicular
         Vector2 correction = ((Vector2)initPosition + constrainedOffset) - (Vector2)transform.position;
 
         // Calculate corrective velocity
