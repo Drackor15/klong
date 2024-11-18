@@ -143,10 +143,10 @@ public class PlayerController : NetworkBehaviour
         // Calculate offset and correction
         Vector2 localOffset = transform.position - (Vector3)initPosition;
         Vector2 constrainedOffset = Vector2.Dot(localOffset, transform.up) * transform.up; // Produces vector parallel to transform.up. This vect is a component of localOffset. localOffset = parallel + perpendicular
-        Vector2 correction = ((Vector2)initPosition + constrainedOffset) - (Vector2)transform.position;
+        Vector2 correction = ((Vector2)initPosition + constrainedOffset) - (Vector2)transform.position; // Finds vector equal in magnitude to the vector perpendicular to transform.up, but goes in opposite direction (-perp = -localOffset + parallel)
 
         // Calculate corrective velocity
-        Vector2 correctiveVelocity = correction / Time.fixedDeltaTime;
+        Vector2 correctiveVelocity = correction / Time.fixedDeltaTime; // that vector gives us the exact strength and direction needed to return to the axis
 
         return correctiveVelocity;
     }
