@@ -14,6 +14,8 @@ public class PlayerController : NetworkBehaviour
     protected PlayerInputActions playerInputActions;
     protected float moveDirection;
     protected Vector2 initPosition;
+    [SyncVar]
+    protected GameObject playerBall;
 
     [SerializeField]
     protected float moveSpeed;
@@ -25,6 +27,11 @@ public class PlayerController : NetworkBehaviour
     [Tooltip("The size (in Deg) in which the paddle arrow can move around in")]
     [Range(10, 160)]
     protected int arrowArcSize = 160;
+    [SerializeField]
+    protected GameObject playerBallPrefab;
+    [SerializeField]
+    [Tooltip("How long (in sec) the ball should be held at the start of a game.")]
+    protected float initHoldTime;
 
     protected float paddleRotationOffset;
 
@@ -43,6 +50,9 @@ public class PlayerController : NetworkBehaviour
 
         AlignPaddle();
         initPosition = transform.position;
+
+        SpawnBall();
+        //InvokeRepeating("InitHoldBallWrapper", initHoldTime, Time.fixedDeltaTime);
     }
 
     private void FixedUpdate() {
@@ -117,6 +127,36 @@ public class PlayerController : NetworkBehaviour
         
         // Apply rotation to the paddle to align the arrow anchor with the origin
         transform.rotation = Quaternion.Euler(0, 0, transform.rotation.eulerAngles.z + angleToFaceOrigin);
+    }
+
+    [Command]
+    private void SpawnBall() {
+        GameObject tmpObj = Instantiate(playerBallPrefab, transform.position * 0.95f, new Quaternion(0, 0, 0, 0));
+        NetworkServer.Spawn(tmpObj);
+        playerBall = tmpObj;
+        RpcUpdatePlayerBall(playerBall);
+    }
+
+    [ClientRpc]
+    private void RpcUpdatePlayerBall(GameObject ball) {
+        playerBall = ball;
+    }
+
+    private void InitHoldBallWrapper() {
+        HoldBall(playerBall.gameObject);
+    }
+
+    private void HoldBall(GameObject ball) {
+        if (ball == null) {
+            Debug.LogError("Method HoldBall: " + ball + " was null!");
+            return;
+        }
+        Vector2 localOffset = ball.transform.position - transform.position * 0.95f;
+        Vector2 constrainedOffset = Vector2.Dot(localOffset, ball.transform.up) * ball.transform.up;
+        Vector2 correction = (Vector2)transform.position * 0.95f + constrainedOffset - (Vector2)ball.transform.position;
+
+        Vector2 correctiveVelocity = correction / Time.fixedDeltaTime;
+        ball.GetComponent<Rigidbody2D>().velocity = correctiveVelocity;
     }
 
     /// <summary>

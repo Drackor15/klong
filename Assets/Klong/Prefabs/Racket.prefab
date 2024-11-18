@@ -233,6 +233,8 @@ MonoBehaviour:
   arrowAnchorTransform: {fileID: 9214501200197304715}
   arrowTransform: {fileID: 2443255463897754211}
   arrowArcSize: 160
+  playerBallPrefab: {fileID: 3869138484452994383, guid: 9ac7190471321834f99a6b3dda5a9be5, type: 3}
+  initHoldTime: 5
 --- !u!1 &5747892089822041373
 GameObject:
   m_ObjectHideFlags: 0
