@@ -13,11 +13,10 @@ public class PlayerController : NetworkBehaviour
     protected Rigidbody2D paddleRB2D;
     protected PlayerInputActions playerInputActions;
     protected float moveDirection;
+    protected Vector2 initPosition;
 
     [SerializeField]
     protected float moveSpeed;
-    [SerializeField]
-    protected Transform paddleTransform;
     [SerializeField]
     protected Transform arrowAnchorTransform;
     [SerializeField]
@@ -43,12 +42,13 @@ public class PlayerController : NetworkBehaviour
         playerInputActions.Player.Look.performed += OnLook;
 
         AlignPaddle();
+        initPosition = transform.position;
     }
 
     private void FixedUpdate() {
         if (!isLocalPlayer) return;
 
-        paddleRB2D.velocity = new Vector2(0, moveDirection * moveSpeed);
+        MovePaddle();
     }
 
     private void OnDisable() {
@@ -57,12 +57,10 @@ public class PlayerController : NetworkBehaviour
 
     #region Events
     private void OnMove(InputAction.CallbackContext context) {
-        Debug.Log(context);
         moveDirection = context.ReadValue<float>();
     }
 
     private void OnMoveCanceled(InputAction.CallbackContext context) {
-        Debug.Log(context);
         moveDirection = 0;
     }
 
@@ -79,7 +77,7 @@ public class PlayerController : NetworkBehaviour
         // Calculate angle in degrees and normalize to the range 0-360
         float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
         angle = (angle + 360) % 360;
-
+        
         // Normalize paddle rotation offset to the range 0-360
         float normalizedOffset = (paddleRotationOffset + 360) % 360;
 
@@ -108,17 +106,38 @@ public class PlayerController : NetworkBehaviour
     /// </summary>
     private void AlignPaddle() {
         // Calculate direction from paddle's position to the origin (0, 0)
-        Vector2 directionToOrigin = (Vector2.zero - (Vector2)paddleTransform.position).normalized;
-
+        Vector2 directionToOrigin = (Vector2.zero - (Vector2)transform.position).normalized;
+        
         // Calculate direction from paddle to arrow anchor in local space
-        Vector2 localArrowDirection = (arrowAnchorTransform.position - paddleTransform.position).normalized;
+        Vector2 localArrowDirection = (arrowAnchorTransform.position - transform.position).normalized;
 
         // Calculate the angle between the paddle’s local arrow direction and the direction to the origin
         float angleToFaceOrigin = Vector2.SignedAngle(localArrowDirection, directionToOrigin);
         paddleRotationOffset = angleToFaceOrigin;
-
+        Debug.Log((paddleRotationOffset + 360)%360);
         // Apply rotation to the paddle to align the arrow anchor with the origin
-        paddleTransform.rotation = Quaternion.Euler(0, 0, paddleTransform.rotation.eulerAngles.z + angleToFaceOrigin);
+        transform.rotation = Quaternion.Euler(0, 0, transform.rotation.eulerAngles.z + angleToFaceOrigin);
+    }
+
+    private void MovePaddle() {
+        if (initPosition.x < 0) {
+            paddleRB2D.velocity = moveDirection * moveSpeed * transform.up + (Vector3)GetCorrectiveVelocity();
+        }
+        else {
+            paddleRB2D.velocity = moveDirection * moveSpeed * -transform.up + (Vector3)GetCorrectiveVelocity();
+        }
+    }
+
+    private Vector2 GetCorrectiveVelocity() {
+        // Calculate offset and correction
+        Vector2 localOffset = transform.position - (Vector3)initPosition;
+        Vector2 constrainedOffset = Vector2.Dot(localOffset, transform.up) * transform.up;
+        Vector2 correction = ((Vector2)initPosition + constrainedOffset) - (Vector2)transform.position;
+
+        // Calculate corrective velocity
+        Vector2 correctiveVelocity = correction / Time.fixedDeltaTime;
+
+        return correctiveVelocity;
     }
     #endregion
 }

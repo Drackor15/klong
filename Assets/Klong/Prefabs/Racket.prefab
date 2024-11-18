@@ -161,7 +161,7 @@ Rigidbody2D:
   m_Interpolate: 1
   m_SleepingMode: 1
   m_CollisionDetection: 1
-  m_Constraints: 5
+  m_Constraints: 4
 --- !u!114 &114104497298166850
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -230,7 +230,6 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   moveSpeed: 5
-  paddleTransform: {fileID: 4118252415362944}
   arrowAnchorTransform: {fileID: 9214501200197304715}
   arrowTransform: {fileID: 2443255463897754211}
   arrowArcSize: 160
