@@ -31,7 +31,9 @@ public class PlayerController : NetworkBehaviour
     protected GameObject playerBallPrefab;
     [SerializeField]
     [Tooltip("How long (in sec) the ball should be held at the start of a game.")]
-    protected float initHoldTime;
+    protected float initHoldBallDuration;
+    protected float holdBallTimer;
+    protected bool isHoldingBall;
 
     protected float paddleRotationOffset;
 
@@ -52,13 +54,14 @@ public class PlayerController : NetworkBehaviour
         initPosition = transform.position;
 
         SpawnBall();
-        //InvokeRepeating("InitHoldBallWrapper", initHoldTime, Time.fixedDeltaTime);
+        isHoldingBall = true;
     }
 
     private void FixedUpdate() {
         if (!isLocalPlayer) return;
 
         MovePaddle();
+        HoldBall(playerBall, initHoldBallDuration);
     }
 
     private void OnDisable() {
@@ -142,21 +145,28 @@ public class PlayerController : NetworkBehaviour
         playerBall = ball;
     }
 
-    private void InitHoldBallWrapper() {
-        HoldBall(playerBall.gameObject);
-    }
-
-    private void HoldBall(GameObject ball) {
+    // This works - kinda. But it looks like changes to the ball are going to have to be made as Command/ClientRpc combos so that all clients see. So it's a good thing we made playerBall a SyncVar.
+    // Also, the changes made to the ball are pretty jittery and don't look good, so we're going to have to smooth this math, do different math, or do something else.
+    // Check out 'constraints'. Some ones to consider: FixedJoint2D, SpringJoint2D.
+    private void HoldBall(GameObject ball, float holdDuration) {
+        if (!isHoldingBall) { return; }
         if (ball == null) {
             Debug.LogError("Method HoldBall: " + ball + " was null!");
             return;
         }
-        Vector2 localOffset = ball.transform.position - transform.position * 0.95f;
-        Vector2 constrainedOffset = Vector2.Dot(localOffset, ball.transform.up) * ball.transform.up;
-        Vector2 correction = (Vector2)transform.position * 0.95f + constrainedOffset - (Vector2)ball.transform.position;
 
-        Vector2 correctiveVelocity = correction / Time.fixedDeltaTime;
-        ball.GetComponent<Rigidbody2D>().velocity = correctiveVelocity;
+        // Set the ball's position directly or via velocity
+        ball.GetComponent<Rigidbody2D>().MovePosition((Vector2)transform.position * 0.95f);
+
+        // Increment the timer
+        holdBallTimer += Time.fixedDeltaTime;
+        Debug.Log(holdBallTimer.ToString());
+        // Stop holding the ball after the specified duration
+        if (holdBallTimer >= holdDuration) {
+            isHoldingBall = false; // Stop holding
+            // holdBallTimer = 0;
+            // FireBall();
+        }
     }
 
     /// <summary>
