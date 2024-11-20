@@ -52,7 +52,7 @@ public class PlayerController : NetworkBehaviour
     public override void OnStartServer() {
         base.OnStartServer();
 
-        //AlignPaddle();
+        ServerAlignPaddle();
         initPosition = transform.position;
         //initPosition = transform.position;
         //Debug.Log("OnStartServer: " + netId);
@@ -95,7 +95,7 @@ public class PlayerController : NetworkBehaviour
     /// <summary>
     /// Paddle Arrow follows Client's mouse cursor. Compensates for any
     /// paddle rotations that may have occured at the start of Client authority.
-    /// For example, when <see cref="AlignPaddle"/> acts upon the paddle.
+    /// For example, when <see cref="ServerAlignPaddle"/> acts upon the paddle.
     /// </summary>
     /// <param name="context"></param>
     //private void OnLook(InputAction.CallbackContext context) {
@@ -132,20 +132,27 @@ public class PlayerController : NetworkBehaviour
     /// <summary>
     /// Orients Client Paddles so they face the Origin.
     /// </summary>
-    //private void AlignPaddle() {
-    //    // Calculate direction from paddle's position to the origin (0, 0)
-    //    Vector2 directionToOrigin = (Vector2.zero - (Vector2)transform.position).normalized;
+    [Server]
+    private void ServerAlignPaddle() {
+        // Calculate direction from paddle's position to the origin (0, 0)
+        Vector2 directionToOrigin = (Vector2.zero - (Vector2)transform.position).normalized;
 
-    //    // Calculate direction from paddle to arrow anchor in local space
-    //    Vector2 localArrowDirection = (arrowAnchorTransform.position - transform.position).normalized;
+        // Calculate direction from paddle to arrow anchor in local space
+        Vector2 localArrowDirection = (arrowAnchorTransform.position - transform.position).normalized;
 
-    //    // Calculate the angle between the paddle’s local arrow direction and the direction to the origin
-    //    float angleToFaceOrigin = Vector2.SignedAngle(localArrowDirection, directionToOrigin);
-    //    paddleRotationOffset = angleToFaceOrigin;
+        // Calculate the angle between the paddle’s local arrow direction and the direction to the origin
+        float angleToFaceOrigin = Vector2.SignedAngle(localArrowDirection, directionToOrigin);
+        paddleRotationOffset = angleToFaceOrigin;
 
-    //    // Apply rotation to the paddle to align the arrow anchor with the origin
-    //    transform.rotation = Quaternion.Euler(0, 0, transform.rotation.eulerAngles.z + angleToFaceOrigin);
-    //}
+        // Apply rotation to the paddle to align the arrow anchor with the origin
+        transform.rotation = Quaternion.Euler(0, 0, transform.rotation.eulerAngles.z + angleToFaceOrigin);
+        RpcUpdatePaddleRotation(transform.rotation);
+    }
+
+    [ClientRpc]
+    private void RpcUpdatePaddleRotation(Quaternion rotation) {
+        transform.rotation = rotation;
+    }
 
     //[Command]
     //private void SpawnBall() {
