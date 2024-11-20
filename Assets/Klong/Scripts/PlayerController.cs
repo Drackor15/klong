@@ -1,12 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Mirror;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem.Composites;
-using System.Linq;
-using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -14,6 +8,7 @@ public class PlayerController : NetworkBehaviour
     protected PlayerInputActions playerInputActions;
     protected float moveDirection;
     protected Vector2 initPosition;
+    Quaternion targetArrowRotation;
     [SyncVar]
     protected GameObject playerBall;
 
@@ -44,8 +39,8 @@ public class PlayerController : NetworkBehaviour
         playerInputActions.Player.Fire.Enable();
 
         playerInputActions.Player.Move.performed += ctx => CmdOnMove(ctx.ReadValue<float>());
-        playerInputActions.Player.Move.canceled += ctx => CmdOnMoveCanceled(ctx);
-        playerInputActions.Player.Look.performed += ctx => CmdOnLook(ctx, Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()));
+        playerInputActions.Player.Move.canceled += ctx => CmdOnMoveCanceled();
+        playerInputActions.Player.Look.performed += ctx => CmdOnLook(Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()));
     }
 
     public override void OnStartServer() {
@@ -74,6 +69,15 @@ public class PlayerController : NetworkBehaviour
         //HoldBall(playerBall, initHoldBallDuration);
     }
 
+    private void Update() {
+        // Interpolate rotation
+        arrowTransform.rotation = Quaternion.Slerp(
+            arrowTransform.rotation,
+            targetArrowRotation,
+            Time.deltaTime * 10
+        );
+    }
+
     private void OnDisable() {
         playerInputActions?.Disable();
     }
@@ -86,19 +90,19 @@ public class PlayerController : NetworkBehaviour
     }
 
     [Command]
-    private void CmdOnMoveCanceled(InputAction.CallbackContext context) {
+    private void CmdOnMoveCanceled() {
         moveDirection = 0;
         //Debug.Log("CmdOnMoveCanceled: " + netId);
     }
 
     /// <summary>
     /// Paddle Arrow follows Client's mouse cursor. Compensates for any
-    /// paddle rotations that may have occured at the start of Client authority.
+    /// paddle rotations that may have occured at the start of the Server.
     /// For example, when <see cref="ServerAlignPaddle"/> acts upon the paddle.
     /// </summary>
     /// <param name="context"></param>
     [Command]
-    private void CmdOnLook(InputAction.CallbackContext context, Vector2 mousePosition) {
+    private void CmdOnLook(Vector2 mousePosition) {
         Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
 
         // Calculate angle in degrees and normalize to the range 0-360
@@ -115,27 +119,27 @@ public class PlayerController : NetworkBehaviour
         // Handle wraparound in the arc range
         if (minAngle < maxAngle) {
             if (angle >= minAngle && angle <= maxAngle) {
-                arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
+                RpcUpdateArrowRotation(angle);
             }
         }
         else {
             // Arc crosses 360/0 boundary
             if (angle >= minAngle || angle <= maxAngle) {
-                arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
+                RpcUpdateArrowRotation(angle);
             }
         }
-        RpcUpdateArrowRotation(arrowTransform.rotation);
     }
 
     [ClientRpc]
-    private void RpcUpdateArrowRotation(Quaternion rot) {
-        arrowTransform.rotation = rot;
+    private void RpcUpdateArrowRotation(float angle) {
+        Quaternion newRotation = Quaternion.Euler(0, 0, angle - 90);
+        targetArrowRotation = newRotation;
     }
     #endregion
 
     #region Methods
     /// <summary>
-    /// Orients Client Paddles so they face the Origin.
+    /// Orients Paddles so they face the Origin.
     /// </summary>
     [Server]
     private void ServerAlignPaddle() {
