@@ -135,7 +135,7 @@ public class PlayerController : NetworkBehaviour
     [Command]
     private void SpawnBall() {
         GameObject tmpObj = Instantiate(playerBallPrefab, transform.position * 0.95f, new Quaternion(0, 0, 0, 0));
-        NetworkServer.Spawn(tmpObj);
+        NetworkServer.Spawn(tmpObj, connectionToClient);
         playerBall = tmpObj;
         RpcUpdatePlayerBall(playerBall);
     }
