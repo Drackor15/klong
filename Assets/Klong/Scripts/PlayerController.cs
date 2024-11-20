@@ -45,8 +45,7 @@ public class PlayerController : NetworkBehaviour
 
         playerInputActions.Player.Move.performed += ctx => CmdOnMove(ctx.ReadValue<float>());
         playerInputActions.Player.Move.canceled += ctx => CmdOnMoveCanceled(ctx);
-        //Debug.Log("OnStartAuthority: " + netId);
-        //playerInputActions.Player.Look.performed += ctx => CmdLook(ctx);
+        playerInputActions.Player.Look.performed += ctx => CmdOnLook(ctx, Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()));
     }
 
     public override void OnStartServer() {
@@ -98,34 +97,40 @@ public class PlayerController : NetworkBehaviour
     /// For example, when <see cref="ServerAlignPaddle"/> acts upon the paddle.
     /// </summary>
     /// <param name="context"></param>
-    //private void OnLook(InputAction.CallbackContext context) {
-    //    Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
-    //    Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
+    [Command]
+    private void CmdOnLook(InputAction.CallbackContext context, Vector2 mousePosition) {
+        Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
 
-    //    // Calculate angle in degrees and normalize to the range 0-360
-    //    float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
-    //    angle = (angle + 360) % 360;
+        // Calculate angle in degrees and normalize to the range 0-360
+        float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
+        angle = (angle + 360) % 360;
 
-    //    // Normalize paddle rotation offset to the range 0-360
-    //    float normalizedOffset = (paddleRotationOffset + 360) % 360;
+        // Normalize paddle rotation offset to the range 0-360
+        float normalizedOffset = (paddleRotationOffset + 360) % 360;
 
-    //    // Check if angle falls within the arc size, using the 0-360 system
-    //    float minAngle = (normalizedOffset - arrowArcSize / 2 + 360) % 360;
-    //    float maxAngle = (normalizedOffset + arrowArcSize / 2) % 360;
+        // Check if angle falls within the arc size, using the 0-360 system
+        float minAngle = (normalizedOffset - arrowArcSize / 2 + 360) % 360;
+        float maxAngle = (normalizedOffset + arrowArcSize / 2) % 360;
 
-    //    // Handle wraparound in the arc range
-    //    if (minAngle < maxAngle) {
-    //        if (angle >= minAngle && angle <= maxAngle) {
-    //            arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
-    //        }
-    //    }
-    //    else {
-    //        // Arc crosses 360/0 boundary
-    //        if (angle >= minAngle || angle <= maxAngle) {
-    //            arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
-    //        }
-    //    }
-    //}
+        // Handle wraparound in the arc range
+        if (minAngle < maxAngle) {
+            if (angle >= minAngle && angle <= maxAngle) {
+                arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
+            }
+        }
+        else {
+            // Arc crosses 360/0 boundary
+            if (angle >= minAngle || angle <= maxAngle) {
+                arrowTransform.rotation = Quaternion.Euler(0, 0, angle - 90);
+            }
+        }
+        RpcUpdateArrowRotation(arrowTransform.rotation);
+    }
+
+    [ClientRpc]
+    private void RpcUpdateArrowRotation(Quaternion rot) {
+        arrowTransform.rotation = rot;
+    }
     #endregion
 
     #region Methods
