@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Mirror;
+using UnityEngine.InputSystem.Controls;
+using System.Security.Cryptography;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -35,12 +37,17 @@ public class PlayerController : NetworkBehaviour
     public override void OnStartAuthority() {
         playerInputActions = new PlayerInputActions();
         playerInputActions.Player.Move.Enable();
-        playerInputActions.Player.Look.Enable();
+        ToggleGamepadActive();
         playerInputActions.Player.Fire.Enable();
 
         playerInputActions.Player.Move.performed += ctx => CmdOnMove(ctx.ReadValue<float>());
         playerInputActions.Player.Move.canceled += ctx => CmdOnMoveCanceled();
-        playerInputActions.Player.Look.performed += ctx => CmdOnLook(Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()));
+        playerInputActions.Player.Look.performed += ctx => CmdOnLook(Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()), false);
+        playerInputActions.Player.StickLook.performed += ctx => {
+            if (ctx.control != null && ctx.control is StickControl stick) {
+                CmdOnLook(stick.value, true);
+            }
+        };
     }
 
     public override void OnStartServer() {
@@ -70,6 +77,8 @@ public class PlayerController : NetworkBehaviour
     }
 
     private void Update() {
+        ToggleGamepadActive();
+
         // Interpolate rotation
         arrowTransform.rotation = Quaternion.Slerp(
             arrowTransform.rotation,
@@ -102,8 +111,15 @@ public class PlayerController : NetworkBehaviour
     /// </summary>
     /// <param name="context"></param>
     [Command]
-    private void CmdOnLook(Vector2 mousePosition) {
-        Vector2 diff = mousePosition - (Vector2)arrowTransform.position;
+    private void CmdOnLook(Vector2 inputPosition, bool isGamepad) {
+        Vector2 diff;
+
+        if (isGamepad) {
+            diff = inputPosition;
+        }
+        else {
+            diff = inputPosition - (Vector2)arrowTransform.position;
+        }
 
         // Calculate angle in degrees and normalize to the range 0-360
         float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
@@ -199,6 +215,19 @@ public class PlayerController : NetworkBehaviour
     //        // FireBall();
     //    }
     //}
+
+    private void ToggleGamepadActive() {
+        if (playerInputActions == null) { return; }
+
+        if (Gamepad.current != null) {
+            playerInputActions.Player.Look.Disable();
+            playerInputActions.Player.StickLook.Enable();
+        }
+        else if (!playerInputActions.Player.Look.enabled) {
+            playerInputActions.Player.StickLook.Disable();
+            playerInputActions.Player.Look.Enable();
+        }
+    }
 
     [Command]
     private void CmdMovePaddle() {

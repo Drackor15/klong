@@ -24,6 +24,15 @@
                     "initialStateCheck": true
                 },
                 {
+                    "name": "StickLook",
+                    "type": "Value",
+                    "id": "dfcdc8d7-9b9b-49f8-bb0a-9dd713dc4e9d",
+                    "expectedControlType": "Stick",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
                     "name": "Fire",
                     "type": "Button",
                     "id": "6a452020-8c1f-49b7-be07-c5a384f2aedf",
@@ -97,6 +106,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Fire",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4ecc8c86-4279-4b59-97ab-91a0739bea0b",
+                    "path": "<Gamepad>/rightStick",
+                    "interactions": "",
+                    "processors": "StickDeadzone(min=0.5,max=0.9)",
+                    "groups": "Gamepad",
+                    "action": "StickLook",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
