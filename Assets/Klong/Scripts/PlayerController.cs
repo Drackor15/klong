@@ -244,7 +244,7 @@ public class PlayerController : NetworkBehaviour
 
         // Stop holding the ball after the specified duration
         if (holdBallTimer >= holdDuration) {
-            FireBall(ball);
+            ServerFireBall(ball);
         }
     }
 
@@ -256,7 +256,7 @@ public class PlayerController : NetworkBehaviour
     }
 
     [Server]
-    private void FireBall(GameObject ball) {
+    private void ServerFireBall(GameObject ball) {
         GameObject tmpObj = Instantiate(ball, ballDisplay.transform.position, new Quaternion(0, 0, 0, 0));
         PlayerBall oldBallScript = ball.GetComponent<PlayerBall>();
         PlayerBall newBallScript = tmpObj.GetComponent<PlayerBall>();
@@ -270,9 +270,38 @@ public class PlayerController : NetworkBehaviour
         newBallScript.ServerSetVelocity(GetArrowVector());
     }
 
+    [Server]
+    void OnCollisionEnter2D(Collision2D col) {
+        // Ensure the collider is a ball
+        var ball = col.transform.GetComponent<PlayerBall>();
+        if (ball == null) { return; }
+
+        // Get the contact point
+        ContactPoint2D contact = col.contacts[0];
+        Vector2 contactPoint = contact.point;
+
+        // Get paddle position
+        Vector2 paddlePosition = transform.position;
+
+        // Determine if the collision is on the side closest to the origin
+        bool closestToOrigin = IsClosestToOrigin(contactPoint, paddlePosition);
+
+        if (closestToOrigin) {
+            ball.ServerSetVelocity(GetArrowVector());
+        }
+        else {
+            Vector2.Reflect(ball.ballRB2D.velocity, contact.normal);
+        }
+    }
+
     [Client]
     public Vector2 GetArrowVector() {
         return arrowTransform.up;
+    }
+
+    [Server]
+    private bool IsClosestToOrigin(Vector2 contactPoint, Vector2 paddlePosition) {
+        return contactPoint.magnitude < paddlePosition.magnitude;
     }
     #endregion
 }
