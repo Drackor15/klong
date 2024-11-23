@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 
 public class PlayerController : NetworkBehaviour
 {
-    protected Rigidbody2D paddleRB2D;
     protected PlayerInputActions playerInputActions;
     protected float moveDirection;
     protected Vector2 initPosition;
@@ -15,7 +14,11 @@ public class PlayerController : NetworkBehaviour
     protected GameObject playerBall;
 
     [SerializeField]
+    protected Rigidbody2D paddleRB2D;
+    [SerializeField]
     protected float moveSpeed;
+    [SerializeField]
+    protected SpriteRenderer ballDisplay;
     [SerializeField]
     protected Transform arrowAnchorTransform;
     [SerializeField]
@@ -55,25 +58,14 @@ public class PlayerController : NetworkBehaviour
 
         ServerAlignPaddle();
         initPosition = transform.position;
-        //initPosition = transform.position;
-        //Debug.Log("OnStartServer: " + netId);
-        //SpawnBall();
-        //isHoldingBall = true;
-    }
-
-    public override void OnStartClient() {
-        base.OnStartClient();
-
-        paddleRB2D = GetComponent<Rigidbody2D>();
-        //Debug.Log("OnStartClient: " + netId);
+        isHoldingBall = true;
     }
 
     private void FixedUpdate() {
         if (isServer) {
             ServerMovePaddle();
-            //CmdMovePaddle();
+            HoldBall(playerBallPrefab, initHoldBallDuration);
         }
-        //HoldBall(playerBall, initHoldBallDuration);
     }
 
     private void Update() {
@@ -90,7 +82,6 @@ public class PlayerController : NetworkBehaviour
     private void OnDisable() {
         playerInputActions?.Disable();
     }
-
     #region Events
     [Command]
     private void CmdOnMove(float val) {
@@ -179,43 +170,6 @@ public class PlayerController : NetworkBehaviour
         transform.rotation = rotation;
     }
 
-    //[Command]
-    //private void SpawnBall() {
-    //    GameObject tmpObj = Instantiate(playerBallPrefab, transform.position * 0.95f, new Quaternion(0, 0, 0, 0));
-    //    NetworkServer.Spawn(tmpObj, connectionToClient);
-    //    playerBall = tmpObj;
-    //    RpcUpdatePlayerBall(playerBall);
-    //}
-
-    //[ClientRpc]
-    //private void RpcUpdatePlayerBall(GameObject ball) {
-    //    playerBall = ball;
-    //}
-
-    // This works - kinda. But it looks like changes to the ball are going to have to be made as Command/ClientRpc combos so that all clients see. So it's a good thing we made playerBall a SyncVar.
-    // Also, the changes made to the ball are pretty jittery and don't look good, so we're going to have to smooth this math, do different math, or do something else.
-    // Check out 'constraints'. Some ones to consider: FixedJoint2D, SpringJoint2D.
-    //private void HoldBall(GameObject ball, float holdDuration) {
-    //    if (!isHoldingBall) { return; }
-    //    if (ball == null) {
-    //        Debug.LogError("Method HoldBall: " + ball + " was null!");
-    //        return;
-    //    }
-
-    //    // Set the ball's position directly or via velocity
-    //    ball.GetComponent<Rigidbody2D>().MovePosition((Vector2)transform.position * 0.95f);
-
-    //    // Increment the timer
-    //    holdBallTimer += Time.fixedDeltaTime;
-    //    Debug.Log(holdBallTimer.ToString());
-    //    // Stop holding the ball after the specified duration
-    //    if (holdBallTimer >= holdDuration) {
-    //        isHoldingBall = false; // Stop holding
-    //        // holdBallTimer = 0;
-    //        // FireBall();
-    //    }
-    //}
-
     private void ToggleGamepadActive() {
         if (playerInputActions == null) { return; }
 
@@ -227,11 +181,6 @@ public class PlayerController : NetworkBehaviour
             playerInputActions.Player.StickLook.Disable();
             playerInputActions.Player.Look.Enable();
         }
-    }
-
-    [Command]
-    private void CmdMovePaddle() {
-        ServerMovePaddle();
     }
 
     /// <summary>
@@ -275,6 +224,55 @@ public class PlayerController : NetworkBehaviour
         Vector2 correctiveVelocity = correction / Time.fixedDeltaTime; // that vector gives us the exact strength and direction needed to return to the axis
 
         return correctiveVelocity;
+    }
+
+    [Server]
+    private void HoldBall(GameObject ball, float holdDuration) {
+        if (!isHoldingBall) { return; }
+        if (ball == null) {
+            Debug.LogError("In Method HoldBall: " + ball + " was null!");
+            return;
+        }
+        if (ball.GetComponent<SpriteRenderer>() == null) {
+            Debug.LogError("In Method HoldBall: No Sprite Render detected for " + ball + "!");
+        }
+
+        RpcDisplayHeldBall(true, ball.GetComponent<SpriteRenderer>().color);
+
+        // Increment the timer
+        holdBallTimer += Time.fixedDeltaTime;
+
+        // Stop holding the ball after the specified duration
+        if (holdBallTimer >= holdDuration) {
+            FireBall(ball);
+        }
+    }
+
+    [ClientRpc]
+    private void RpcDisplayHeldBall(bool display, Color ballColor) {
+        if (ballDisplay.enabled == display) { return; }
+        if (ballColor != Color.clear) { ballDisplay.color = ballColor; }
+        ballDisplay.enabled = display;
+    }
+
+    [Server]
+    private void FireBall(GameObject ball) {
+        GameObject tmpObj = Instantiate(ball, ballDisplay.transform.position, new Quaternion(0, 0, 0, 0));
+        PlayerBall oldBallScript = ball.GetComponent<PlayerBall>();
+        PlayerBall newBallScript = tmpObj.GetComponent<PlayerBall>();
+        newBallScript.ServerSetOwnerID(oldBallScript, netId);
+
+        isHoldingBall = false;
+        holdBallTimer = 0;
+        RpcDisplayHeldBall(false, Color.clear); // can't have optional parameters for Rpc's >:(
+
+        NetworkServer.Spawn(tmpObj, connectionToClient);
+        newBallScript.ServerSetVelocity(GetArrowVector());
+    }
+
+    [Client]
+    public Vector2 GetArrowVector() {
+        return arrowTransform.up;
     }
     #endregion
 }
