@@ -27,11 +27,7 @@ public class PlayerBall : NetworkBehaviour {
     void OnCollisionEnter2D(Collision2D col) {
         if (col.transform.GetComponent<PlayerBall>() == null) { return; }
 
-        // Reflect the current ball's velocity
         Vector2.Reflect(ballRB2D.velocity, col.GetContact(0).normal);
-
-        // Reflect the other ball's velocity
-        //otherBall.ServerSetVelocity(Vector2.Reflect(otherBall.ballRB2D.velocity, -col.contacts[0].normal));
     }
 
     [Server]
