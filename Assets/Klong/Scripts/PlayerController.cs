@@ -86,18 +86,16 @@ public class PlayerController : NetworkBehaviour
     [Command]
     private void CmdOnMove(float val) {
         moveDirection = val;
-        //Debug.Log("CmdOnMove: " + netId);
     }
 
     [Command]
     private void CmdOnMoveCanceled() {
         moveDirection = 0;
-        //Debug.Log("CmdOnMoveCanceled: " + netId);
     }
 
     /// <summary>
-    /// Paddle Arrow follows Client's mouse cursor. Compensates for any
-    /// paddle rotations that may have occured at the start of the Server.
+    /// Determines angle needed for Paddle Arrow to point at inputPosition.
+    /// Compensates for any paddle rotations that may have occured at the start of the Server.
     /// For example, when <see cref="ServerAlignPaddle"/> acts upon the paddle.
     /// </summary>
     /// <param name="context"></param>
@@ -146,6 +144,25 @@ public class PlayerController : NetworkBehaviour
 
     #region Methods
     /// <summary>
+    /// Toggles between accepting gamepad input or
+    /// accepting mouse input to rotate paddle arrows.
+    /// Priority is given to gamepads.
+    /// </summary>
+    [Client]
+    private void ToggleGamepadActive() {
+        if (playerInputActions == null) { return; }
+
+        if (Gamepad.current != null) {
+            playerInputActions.Player.Look.Disable();
+            playerInputActions.Player.StickLook.Enable();
+        }
+        else if (!playerInputActions.Player.Look.enabled) {
+            playerInputActions.Player.StickLook.Disable();
+            playerInputActions.Player.Look.Enable();
+        }
+    }
+
+    /// <summary>
     /// Orients Paddles so they face the Origin.
     /// </summary>
     [Server]
@@ -170,34 +187,18 @@ public class PlayerController : NetworkBehaviour
         transform.rotation = rotation;
     }
 
-    private void ToggleGamepadActive() {
-        if (playerInputActions == null) { return; }
-
-        if (Gamepad.current != null) {
-            playerInputActions.Player.Look.Disable();
-            playerInputActions.Player.StickLook.Enable();
-        }
-        else if (!playerInputActions.Player.Look.enabled) {
-            playerInputActions.Player.StickLook.Disable();
-            playerInputActions.Player.Look.Enable();
-        }
-    }
-
     /// <summary>
     /// Applies velocity to the paddle, which is dependant on local y-axis, movement input, and spawn position
     /// relative to the origin (spawn position implies certain rotations, which will change where the local y-axis points).
     /// </summary>
     [Server]
     private void ServerMovePaddle() {
-        //Debug.Log("ServerMovePaddle: " + netId);
         if (initPosition.x < 0) {
             paddleRB2D.velocity = moveDirection * moveSpeed * transform.up + (Vector3)GetCorrectiveVelocity();
         }
         else {
             paddleRB2D.velocity = moveDirection * moveSpeed * -transform.up + (Vector3)GetCorrectiveVelocity();
         }
-        //Debug.Log("moveDir: " + moveDirection + " netId: " + netId);
-        //Debug.Log("Vel: " + paddleRB2D.velocity + " netId: " + netId);
         RpcUpdatePaddleVelocity(paddleRB2D.velocity);
     }
 
@@ -207,12 +208,12 @@ public class PlayerController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Helper functin for <see cref="ServerMovePaddle"/>. Uses Vector Projection to determine the
+    /// Helper function for <see cref="ServerMovePaddle"/>. Uses Vector Projection to determine the
     /// corrective force necessary to keep the paddle on its axis.
     /// Checkout (https://www.geeksforgeeks.org/vector-projection-formula/) & (https://www.youtube.com/watch?v=Rw70zkvqEiE)
     /// for more info on Vector Projection.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The velocity needed to return the paddle to its artificial axis.</returns>
     [Server]
     private Vector2 GetCorrectiveVelocity() {
         // Calculate offset and correction
@@ -226,6 +227,12 @@ public class PlayerController : NetworkBehaviour
         return correctiveVelocity;
     }
 
+    /// <summary>
+    /// Displays a ball sprite near the paddle for a given duration of time.
+    /// Fires the ball once time is up or fire button is pressed.
+    /// </summary>
+    /// <param name="ball">Generally expects a prefab or destroyed ball</param>
+    /// <param name="holdDuration">The duration of time which the ball is 'held'</param>
     [Server]
     private void HoldBall(GameObject ball, float holdDuration) {
         if (!isHoldingBall) { return; }
@@ -255,6 +262,11 @@ public class PlayerController : NetworkBehaviour
         ballDisplay.enabled = display;
     }
 
+    /// <summary>
+    /// Helper function for <see cref="HoldBall(GameObject, float)"/>.
+    /// Instantiates and spawns a ball with an applied velocity.
+    /// </summary>
+    /// <param name="ball"></param>
     [Server]
     private void ServerFireBall(GameObject ball) {
         GameObject tmpObj = Instantiate(ball, ballDisplay.transform.position, new Quaternion(0, 0, 0, 0));
@@ -272,21 +284,24 @@ public class PlayerController : NetworkBehaviour
 
     [Server]
     void OnCollisionEnter2D(Collision2D col) {
-        // Ensure the collider is a ball
+        OnBallCollision(col);
+    }
+
+    /// <summary>
+    /// Applies velocity parallel to player arrow if ball collides near paddle's inner face.
+    /// Otherwise a basic reflection is applied.
+    /// </summary>
+    /// <param name="col"></param>
+    [Server]
+    private void OnBallCollision(Collision2D col) {
         var ball = col.transform.GetComponent<PlayerBall>();
         if (ball == null) { return; }
 
-        // Get the contact point
         ContactPoint2D contact = col.contacts[0];
         Vector2 contactPoint = contact.point;
-
-        // Get paddle position
         Vector2 paddlePosition = transform.position;
 
-        // Determine if the collision is on the side closest to the origin
-        bool closestToOrigin = IsClosestToOrigin(contactPoint, paddlePosition);
-
-        if (closestToOrigin) {
+        if (IsClosestToOrigin(contactPoint, paddlePosition)) {
             ball.ServerSetVelocity(GetArrowVector());
         }
         else {
@@ -294,11 +309,19 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// </summary>
+    /// <returns>Vector2 of the direction in which the player arrow faces</returns>
     [Client]
     public Vector2 GetArrowVector() {
         return arrowTransform.up;
     }
 
+    /// <summary>
+    /// </summary>
+    /// <param name="contactPoint"></param>
+    /// <param name="paddlePosition"></param>
+    /// <returns><see langword="true"/> if the first vector is closer to the origin, <see langword="false"/> otherwise</returns>
     [Server]
     private bool IsClosestToOrigin(Vector2 contactPoint, Vector2 paddlePosition) {
         return contactPoint.magnitude < paddlePosition.magnitude;
