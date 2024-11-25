@@ -34,6 +34,7 @@ public class PlayerController : NetworkBehaviour
     protected float initHoldBallDuration;
     protected float holdBallTimer;
     protected bool isHoldingBall;
+    protected bool hasFired;
 
     protected float paddleRotationOffset;
 
@@ -51,6 +52,7 @@ public class PlayerController : NetworkBehaviour
                 CmdOnLook(stick.value, true);
             }
         };
+        playerInputActions.Player.Fire.performed += ctx => CmdOnFire();
     }
 
     public override void OnStartServer() {
@@ -139,6 +141,11 @@ public class PlayerController : NetworkBehaviour
     private void RpcUpdateArrowRotation(float angle) {
         Quaternion newRotation = Quaternion.Euler(0, 0, angle - 90);
         targetArrowRotation = newRotation;
+    }
+
+    [Command]
+    private void CmdOnFire() {
+        hasFired = true;
     }
     #endregion
 
@@ -250,7 +257,7 @@ public class PlayerController : NetworkBehaviour
         holdBallTimer += Time.fixedDeltaTime;
 
         // Stop holding the ball after the specified duration
-        if (holdBallTimer >= holdDuration) {
+        if (hasFired || holdBallTimer >= holdDuration) {
             ServerFireBall(ball);
         }
     }
@@ -274,6 +281,7 @@ public class PlayerController : NetworkBehaviour
         PlayerBall newBallScript = tmpObj.GetComponent<PlayerBall>();
         newBallScript.ServerSetOwnerID(oldBallScript, netId);
 
+        hasFired = false;
         isHoldingBall = false;
         holdBallTimer = 0;
         RpcDisplayHeldBall(false, Color.clear); // can't have optional parameters for Rpc's >:(
