@@ -274,6 +274,9 @@ MonoBehaviour:
   arrowArcSize: 160
   playerBallPrefab: {fileID: 3869138484452994383, guid: 9ac7190471321834f99a6b3dda5a9be5, type: 3}
   initHoldBallDuration: 5
+  playerGoalPrefab: {fileID: 3276167727486489149, guid: 0ea1a85c3c8a1be4da95737709553a63, type: 3}
+  playerGoalOffset: 2.5
+  playerHP: 30
 --- !u!1 &4490006259578433348
 GameObject:
   m_ObjectHideFlags: 0

@@ -266,4 +266,4 @@ MonoBehaviour:
   syncInterval: 0
   ballRB2D: {fileID: 4378125112786918689}
   playerOwnerNetID: 0
-  defaultSpeed: 5
+  defaultSpeed: 6

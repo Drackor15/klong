@@ -3,6 +3,7 @@ using UnityEngine.InputSystem;
 using Mirror;
 using UnityEngine.InputSystem.Controls;
 using System.Security.Cryptography;
+using Mirror.Examples.Pong;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -35,6 +36,15 @@ public class PlayerController : NetworkBehaviour
     protected float holdBallTimer;
     protected bool isHoldingBall;
     protected bool hasFired;
+    [SerializeField]
+    protected GameObject playerGoalPrefab;
+    [SerializeField]
+    [Tooltip("How far from the paddle the goal should be spawned")]
+    [Min(1f)]
+    protected float playerGoalOffset;
+    [SerializeField]
+    [Range(-30, 100)]
+    protected int playerHP;
 
     protected float paddleRotationOffset;
 
@@ -61,6 +71,7 @@ public class PlayerController : NetworkBehaviour
         ServerAlignPaddle();
         initPosition = transform.position;
         isHoldingBall = true;
+        ServerSpawnGoal();
     }
 
     private void FixedUpdate() {
@@ -73,7 +84,7 @@ public class PlayerController : NetworkBehaviour
     private void Update() {
         ToggleGamepadActive();
 
-        // Interpolate rotation
+        // Interpolate rotation on Server and Client
         arrowTransform.rotation = Quaternion.Slerp(
             arrowTransform.rotation,
             targetArrowRotation,
@@ -84,6 +95,7 @@ public class PlayerController : NetworkBehaviour
     private void OnDisable() {
         playerInputActions?.Disable();
     }
+
     #region Events
     [Command]
     private void CmdOnMove(float val) {
@@ -192,6 +204,14 @@ public class PlayerController : NetworkBehaviour
     [ClientRpc]
     private void RpcUpdatePaddleRotation(Quaternion rotation) {
         transform.rotation = rotation;
+    }
+
+    [Server]
+    private void ServerSpawnGoal() {
+        GameObject tmpObj = Instantiate(playerGoalPrefab, initPosition + initPosition.normalized * playerGoalOffset, Quaternion.Euler(0,0, (paddleRotationOffset + 360) % 360));
+        PlayerGoal goalScript = tmpObj.GetComponent<PlayerGoal>();
+        goalScript.ServerSetOwnerID(netId);
+        NetworkServer.Spawn(tmpObj, connectionToClient);
     }
 
     /// <summary>
@@ -333,6 +353,18 @@ public class PlayerController : NetworkBehaviour
     [Server]
     private bool IsClosestToOrigin(Vector2 contactPoint, Vector2 paddlePosition) {
         return contactPoint.magnitude < paddlePosition.magnitude;
+    }
+
+    [Server]
+    public void ServerAddHP(int hp) {
+        if (hp%5 != 0) { Debug.LogError("ServerAddHP expected an int divisble by 5, but got " + hp + "!"); return; }
+        playerHP += hp;
+        RpcUpdatePlayerHP(playerHP);
+    }
+
+    [ClientRpc]
+    private void RpcUpdatePlayerHP(int hp) {
+        playerHP = hp;
     }
     #endregion
 }

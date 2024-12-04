@@ -1,7 +1,4 @@
 using Mirror;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerBall : NetworkBehaviour {
@@ -24,10 +21,40 @@ public class PlayerBall : NetworkBehaviour {
     }
 
     [Server]
+    public PlayerController GetPlayerController(uint netID) {
+        if (NetworkServer.spawned.TryGetValue(netID, out NetworkIdentity networkIdentity)) {
+            return networkIdentity.gameObject.GetComponent<PlayerController>();
+        }
+        return null;
+    }
+
+    [Server]
     void OnCollisionEnter2D(Collision2D col) {
+        OnGoalCollide(col);
+        OnBallCollide(col);
+    }
+
+    [Server]
+    private void OnBallCollide(Collision2D col) {
         if (col.transform.GetComponent<PlayerBall>() == null) { return; }
 
         Vector2.Reflect(ballRB2D.velocity, col.GetContact(0).normal);
+    }
+
+    [Server]
+    private void OnGoalCollide(Collision2D col) {
+        // This may change if we have powers that change ball dmg...
+        if (!col.transform.name.Contains("Goal")) { return; }
+
+        uint goalOwnerNetID = col.transform.GetComponent<PlayerGoal>().playerOwnerNetID;
+        if (playerOwnerNetID == goalOwnerNetID) {
+            GetPlayerController(goalOwnerNetID).ServerAddHP(-5);
+        }
+        else {
+            GetPlayerController(goalOwnerNetID).ServerAddHP(-10);
+        }
+        // Then Check if player is dead. If so, do death stuff and let server and other clients know.
+        // server should have some trigger after a player has died, to check if 1 player remains. If so, then do end game stuff.
     }
 
     [Server]
