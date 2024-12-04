@@ -53,6 +53,10 @@ public class PlayerBall : NetworkBehaviour {
         else {
             GetPlayerController(goalOwnerNetID).ServerAddHP(-10);
         }
+        GetPlayerController(playerOwnerNetID).ServerSetIsHoldingBall(true);
+        NetworkServer.Destroy(gameObject); // For now we will try this, however, we will most likely want to do a prefab pool instead: https://mirror-networking.gitbook.io/docs/manual/guides/gameobjects/custom-spawnfunctions
+        
+        // The notes below should probably be handled in the playercontroller script
         // Then Check if player is dead. If so, do death stuff and let server and other clients know.
         // server should have some trigger after a player has died, to check if 1 player remains. If so, then do end game stuff.
     }

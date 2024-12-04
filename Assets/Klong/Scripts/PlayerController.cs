@@ -366,5 +366,10 @@ public class PlayerController : NetworkBehaviour
     private void RpcUpdatePlayerHP(int hp) {
         playerHP = hp;
     }
+
+    [Server]
+    public void ServerSetIsHoldingBall(bool isHoldingBall) {
+       this.isHoldingBall = isHoldingBall;
+    }
     #endregion
 }
