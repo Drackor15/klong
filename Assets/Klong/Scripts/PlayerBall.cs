@@ -1,5 +1,6 @@
 using Mirror;
 using Mirror.Examples;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerBall : NetworkBehaviour {
@@ -24,6 +25,12 @@ public class PlayerBall : NetworkBehaviour {
             return networkIdentity.gameObject.GetComponent<PlayerController>();
         }
         return null;
+    }
+
+    private void FixedUpdate() {
+        if (isServer) {
+            ServerClampBallVelocity();
+        }
     }
 
     [Server]
@@ -58,6 +65,13 @@ public class PlayerBall : NetworkBehaviour {
         // The notes below should probably be handled in the playercontroller script
         // Then Check if player is dead. If so, do death stuff and let server and other clients know.
         // server should have some trigger after a player has died, to check if 1 player remains. If so, then do end game stuff.
+    }
+
+    [Server]
+    private void ServerClampBallVelocity() {
+        if ((ballRB2D.velocity.magnitude > defaultSpeed + 0.1f) || (ballRB2D.velocity.magnitude < defaultSpeed - 0.1f)) {
+            ballRB2D.velocity = Vector2.ClampMagnitude(ballRB2D.velocity, defaultSpeed);
+        }
     }
 
     [Server]
