@@ -1,4 +1,5 @@
 using Mirror;
+using Mirror.Examples;
 using UnityEngine;
 
 public class PlayerBall : NetworkBehaviour {
@@ -11,11 +12,8 @@ public class PlayerBall : NetworkBehaviour {
     protected float defaultSpeed;
 
     [Server]
-    public void ServerSetOwnerID(PlayerBall oldBallScript, uint netID) {
-        if (oldBallScript.playerOwnerNetID != 0) {
-            playerOwnerNetID = oldBallScript.playerOwnerNetID;
-        }
-        else {
+    public void ServerSetOwnerID(uint netID) {
+        if (playerOwnerNetID == 0) {
             playerOwnerNetID = netID;
         }
     }
@@ -54,8 +52,9 @@ public class PlayerBall : NetworkBehaviour {
             GetPlayerController(goalOwnerNetID).ServerAddHP(-10);
         }
         GetPlayerController(playerOwnerNetID).ServerSetIsHoldingBall(true);
-        NetworkServer.Destroy(gameObject); // For now we will try this, however, we will most likely want to do a prefab pool instead: https://mirror-networking.gitbook.io/docs/manual/guides/gameobjects/custom-spawnfunctions
-        
+        NetworkServer.UnSpawn(gameObject);
+        PrefabPool.singleton.Return(PrefabPool.singleton.GetPooledPrefab("Ball"), gameObject);
+
         // The notes below should probably be handled in the playercontroller script
         // Then Check if player is dead. If so, do death stuff and let server and other clients know.
         // server should have some trigger after a player has died, to check if 1 player remains. If so, then do end game stuff.

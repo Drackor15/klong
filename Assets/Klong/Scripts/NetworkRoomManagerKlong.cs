@@ -15,9 +15,6 @@ using Mirror;
 /// The room has slots that track the joined players, and a maximum player count that is enforced.
 /// It requires that the NetworkRoomPlayer component be on the room player objects.
 /// NetworkRoomManager is derived from NetworkManager, and so it implements many of the virtual functions provided by the NetworkManager class.
-/// 
-/// Connor: Look at NetworkManagerPong.cs, NetworkRoomManagerExt.cs, and PlayerController.cs for inspiration on how to handle this and other classes.
-///         For Example, client/server priviledges.
 /// </summary>
 public class NetworkRoomManagerKlong : NetworkRoomManager
 {

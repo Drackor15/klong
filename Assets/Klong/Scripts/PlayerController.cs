@@ -4,6 +4,7 @@ using Mirror;
 using UnityEngine.InputSystem.Controls;
 using System.Security.Cryptography;
 using Mirror.Examples.Pong;
+using Mirror.Examples;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -13,6 +14,7 @@ public class PlayerController : NetworkBehaviour
     Quaternion targetArrowRotation;
     [SyncVar]
     protected GameObject playerBall;
+    protected uint ownerNetIDToSearchFor;
 
     [SerializeField]
     protected Rigidbody2D paddleRB2D;
@@ -28,8 +30,8 @@ public class PlayerController : NetworkBehaviour
     [Tooltip("The size (in Deg) in which the paddle arrow can move around in")]
     [Range(10, 160)]
     protected int arrowArcSize = 160;
-    [SerializeField]
-    protected GameObject playerBallPrefab;
+    [SerializeField, ReadOnly]
+    protected Color playerColor = Color.white;
     [SerializeField]
     [Tooltip("How long (in sec) the ball should be held at the start of a game.")]
     protected float initHoldBallDuration;
@@ -70,6 +72,7 @@ public class PlayerController : NetworkBehaviour
 
         ServerAlignPaddle();
         initPosition = transform.position;
+        ownerNetIDToSearchFor = netId;
         isHoldingBall = true;
         ServerSpawnGoal();
     }
@@ -77,7 +80,7 @@ public class PlayerController : NetworkBehaviour
     private void FixedUpdate() {
         if (isServer) {
             ServerMovePaddle();
-            HoldBall(playerBallPrefab, initHoldBallDuration);
+            HoldBall(initHoldBallDuration);
         }
     }
 
@@ -258,27 +261,20 @@ public class PlayerController : NetworkBehaviour
     /// Displays a ball sprite near the paddle for a given duration of time.
     /// Fires the ball once time is up or fire button is pressed.
     /// </summary>
-    /// <param name="ball">Generally expects a prefab or destroyed ball</param>
     /// <param name="holdDuration">The duration of time which the ball is 'held'</param>
     [Server]
-    private void HoldBall(GameObject ball, float holdDuration) {
+    private void HoldBall(float holdDuration) {
+        // Case that we need to handle in the future: What happens if we're holding a ball and our ball needs to held?
         if (!isHoldingBall) { return; }
-        if (ball == null) {
-            Debug.LogError("In Method HoldBall: " + ball + " was null!");
-            return;
-        }
-        if (ball.GetComponent<SpriteRenderer>() == null) {
-            Debug.LogError("In Method HoldBall: No Sprite Render detected for " + ball + "!");
-        }
 
-        RpcDisplayHeldBall(true, ball.GetComponent<SpriteRenderer>().color);
+        RpcDisplayHeldBall(true, playerColor);
 
         // Increment the timer
         holdBallTimer += Time.fixedDeltaTime;
 
         // Stop holding the ball after the specified duration
         if (hasFired || holdBallTimer >= holdDuration) {
-            ServerFireBall(ball);
+            ServerFireBall();
         }
     }
 
@@ -290,16 +286,16 @@ public class PlayerController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Helper function for <see cref="HoldBall(GameObject, float)"/>.
-    /// Instantiates and spawns a ball with an applied velocity.
+    /// Helper function for <see cref="HoldBall(float)"/>.
+    /// Grabs ball from PrefabPool and spawns it with an applied velocity.
     /// </summary>
     /// <param name="ball"></param>
     [Server]
-    private void ServerFireBall(GameObject ball) {
-        GameObject tmpObj = Instantiate(ball, ballDisplay.transform.position, new Quaternion(0, 0, 0, 0));
-        PlayerBall oldBallScript = ball.GetComponent<PlayerBall>();
-        PlayerBall newBallScript = tmpObj.GetComponent<PlayerBall>();
-        newBallScript.ServerSetOwnerID(oldBallScript, netId);
+    private void ServerFireBall() {
+        GameObject ballPrefab = PrefabPool.singleton.GetPooledPrefab("Ball");
+        GameObject tmpObj = PrefabPool.singleton.Get(ballPrefab, ballDisplay.transform.position, new Quaternion(0, 0, 0, 0), ownerNetIDToSearchFor);
+        PlayerBall ballScript = tmpObj.GetComponent<PlayerBall>();
+        ballScript.ServerSetOwnerID(netId);
 
         hasFired = false;
         isHoldingBall = false;
@@ -307,7 +303,7 @@ public class PlayerController : NetworkBehaviour
         RpcDisplayHeldBall(false, Color.clear); // can't have optional parameters for Rpc's >:(
 
         NetworkServer.Spawn(tmpObj, connectionToClient);
-        newBallScript.ServerSetVelocity(GetArrowVector());
+        ballScript.ServerSetVelocity(GetArrowVector());
     }
 
     [Server]
