@@ -69,7 +69,10 @@ public class PlayerBall : NetworkBehaviour {
 
     [Server]
     private void ServerClampBallVelocity() {
-        if ((ballRB2D.velocity.magnitude > defaultSpeed + 0.1f) || (ballRB2D.velocity.magnitude < defaultSpeed - 0.1f)) {
+        if (ballRB2D.velocity.magnitude == 0f) {
+            ballRB2D.velocity = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * defaultSpeed;
+        }
+        else {
             ballRB2D.velocity = Vector2.ClampMagnitude(ballRB2D.velocity, defaultSpeed);
         }
     }
