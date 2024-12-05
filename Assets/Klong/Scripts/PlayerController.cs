@@ -289,7 +289,6 @@ public class PlayerController : NetworkBehaviour
     /// Helper function for <see cref="HoldBall(float)"/>.
     /// Grabs ball from PrefabPool and spawns it with an applied velocity.
     /// </summary>
-    /// <param name="ball"></param>
     [Server]
     private void ServerFireBall() {
         GameObject ballPrefab = PrefabPool.singleton.GetPooledPrefab("Ball");
