@@ -37,7 +37,7 @@ public class PlayerBall : NetworkBehaviour {
 
     [Server]
     private void OnWallCollide(Collision2D col) {
-        if (!col.transform.name.Contains("Wall")) { Debug.Log(col.gameObject.name);  return; }
+        if (!col.transform.name.Contains("Wall")) { return; }
 
         ServerSetVelocity(Vector2.Reflect(ballRB2D.velocity, col.GetContact(0).normal).normalized);
     }
@@ -80,7 +80,7 @@ public class PlayerBall : NetworkBehaviour {
         var paddle = col.transform.GetComponent<PlayerController>();
         if (paddle == null) { return; }
 
-        ContactPoint2D contact = col.contacts[0];
+        ContactPoint2D contact = col.GetContact(0);
         Vector2 contactPoint = contact.point;
         Vector2 paddlePosition = col.transform.position;
 
