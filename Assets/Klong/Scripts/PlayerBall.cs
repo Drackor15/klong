@@ -27,12 +27,6 @@ public class PlayerBall : NetworkBehaviour {
         return null;
     }
 
-    private void FixedUpdate() {
-        if (isServer) {
-            ServerClampBallVelocity();
-        }
-    }
-
     void OnCollisionEnter2D(Collision2D col) {
         if (!isServer) { return; }
         OnGoalCollide(col);
@@ -95,16 +89,6 @@ public class PlayerBall : NetworkBehaviour {
         }
         else {
             ServerSetVelocity(Vector2.Reflect(ballRB2D.velocity, contact.normal).normalized);
-        }
-    }
-
-    [Server]
-    private void ServerClampBallVelocity() {
-        if (ballRB2D.velocity.magnitude == 0f) {
-            ballRB2D.velocity = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * defaultSpeed;
-        }
-        else {
-            ballRB2D.velocity = Vector2.ClampMagnitude(ballRB2D.velocity, defaultSpeed);
         }
     }
 
