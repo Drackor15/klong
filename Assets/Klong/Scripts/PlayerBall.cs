@@ -33,17 +33,26 @@ public class PlayerBall : NetworkBehaviour {
         }
     }
 
-    [Server]
     void OnCollisionEnter2D(Collision2D col) {
+        if (!isServer) { return; }
         OnGoalCollide(col);
         OnBallCollide(col);
+        OnWallCollide(col);
+        OnPaddleCollide(col);
+    }
+
+    [Server]
+    private void OnWallCollide(Collision2D col) {
+        if (!col.transform.name.Contains("Wall")) { Debug.Log(col.gameObject.name);  return; }
+
+        ServerSetVelocity(Vector2.Reflect(ballRB2D.velocity, col.GetContact(0).normal).normalized);
     }
 
     [Server]
     private void OnBallCollide(Collision2D col) {
         if (col.transform.GetComponent<PlayerBall>() == null) { return; }
 
-        Vector2.Reflect(ballRB2D.velocity, col.GetContact(0).normal);
+        ServerSetVelocity(Vector2.Reflect(ballRB2D.velocity, col.GetContact(0).normal).normalized);
     }
 
     [Server]
@@ -65,6 +74,28 @@ public class PlayerBall : NetworkBehaviour {
         // The notes below should probably be handled in the playercontroller script
         // Then Check if player is dead. If so, do death stuff and let server and other clients know.
         // server should have some trigger after a player has died, to check if 1 player remains. If so, then do end game stuff.
+    }
+
+    /// <summary>
+    /// Applies velocity parallel to player arrow if ball collides near paddle's inner face.
+    /// Otherwise a basic reflection is applied.
+    /// </summary>
+    /// <param name="col"></param>
+    [Server]
+    private void OnPaddleCollide(Collision2D col) {
+        var paddle = col.transform.GetComponent<PlayerController>();
+        if (paddle == null) { return; }
+
+        ContactPoint2D contact = col.contacts[0];
+        Vector2 contactPoint = contact.point;
+        Vector2 paddlePosition = col.transform.position;
+
+        if (paddle.IsClosestToOrigin(contactPoint, paddlePosition)) {
+            ServerSetVelocity(paddle.GetArrowVector());
+        }
+        else {
+            ServerSetVelocity(Vector2.Reflect(ballRB2D.velocity, contact.normal).normalized);
+        }
     }
 
     [Server]

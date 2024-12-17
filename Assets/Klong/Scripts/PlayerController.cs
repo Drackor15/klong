@@ -305,33 +305,6 @@ public class PlayerController : NetworkBehaviour
         ballScript.ServerSetVelocity(GetArrowVector());
     }
 
-    [Server]
-    void OnCollisionEnter2D(Collision2D col) {
-        OnBallCollision(col);
-    }
-
-    /// <summary>
-    /// Applies velocity parallel to player arrow if ball collides near paddle's inner face.
-    /// Otherwise a basic reflection is applied.
-    /// </summary>
-    /// <param name="col"></param>
-    [Server]
-    private void OnBallCollision(Collision2D col) {
-        var ball = col.transform.GetComponent<PlayerBall>();
-        if (ball == null) { return; }
-
-        ContactPoint2D contact = col.contacts[0];
-        Vector2 contactPoint = contact.point;
-        Vector2 paddlePosition = transform.position;
-
-        if (IsClosestToOrigin(contactPoint, paddlePosition)) {
-            ball.ServerSetVelocity(GetArrowVector());
-        }
-        else {
-            Vector2.Reflect(ball.ballRB2D.velocity, contact.normal);
-        }
-    }
-
     /// <summary>
     /// </summary>
     /// <returns>Vector2 of the direction in which the player arrow faces</returns>
@@ -346,7 +319,7 @@ public class PlayerController : NetworkBehaviour
     /// <param name="paddlePosition"></param>
     /// <returns><see langword="true"/> if the first vector is closer to the origin, <see langword="false"/> otherwise</returns>
     [Server]
-    private bool IsClosestToOrigin(Vector2 contactPoint, Vector2 paddlePosition) {
+    public bool IsClosestToOrigin(Vector2 contactPoint, Vector2 paddlePosition) {
         return contactPoint.magnitude < paddlePosition.magnitude;
     }
 
